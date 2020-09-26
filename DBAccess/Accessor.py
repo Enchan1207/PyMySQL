@@ -16,20 +16,36 @@ class Accessor():
             port = url.port or 3306,
             user = url.username or 'root',
             password = url.password or 'password',
-            database = url.path[1:] or 'test_database',
+            database = url.path[1:] or 'database',
         )
         self.connection.ping(reconnect = True)
         self.isConnected = self.connection.is_connected()
 
         # 接続できたらcursorを作成
         if self.isConnected:
-            self.cursor = self.connection.cursor()
+            self.cursor = self.connection.cursor(buffered = True)
 
     # SQL実行
-    def exec(self, sql, param):
+    def exec(self, sql, param = None):
         if not self.isConnected:
             return -1
 
-        print(type(param))
-        self.cursor.execute(sql, param)
+        # paramがタプルならexecute、リストならexecutemany
+        paramType = type(param)
+        if paramType is type(()):
+            self.cursor.execute(sql, param)
+        elif paramType is type([]):
+            self.cursor.executemany(sql, param)
+        else:
+            self.cursor.execute(sql)
 
+        self.connection.commit()
+
+    # 接続切断
+    def disConnection(self):
+        self.cursor.close()
+        self.connection.close()
+
+    # フェッチ
+    def fetch(self):
+        return self.cursor.fetchall()
